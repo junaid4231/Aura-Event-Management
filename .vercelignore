@@ -1,0 +1,9 @@
+# Source & tooling — not needed on the live site
+build.py
+README.md
+DEPLOY.md
+assets/aura.css
+assets/aura.js
+__pycache__
+*.py
+.gitignore

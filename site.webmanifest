@@ -1,0 +1,27 @@
+{
+  "name": "Aura Event Management",
+  "short_name": "Aura",
+  "description": "Bespoke Christmas d\u00e9cor across Dubai and the UAE.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0D1712",
+  "theme_color": "#0D1712",
+  "icons": [
+    {
+      "src": "/assets/logo/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/assets/logo/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/assets/logo/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
