@@ -1,9 +1,9 @@
 """Tiny static builder: shared head/header/footer → index.html, work.html, enquire.html"""
-import pathlib, hashlib, json
+import pathlib, hashlib, json, re
 from PIL import Image
 
 # >>> Set this to your real domain once connected in Vercel (no trailing slash) <<<
-SITE_URL = "https://aura-event-management.vercel.app"
+SITE_URL = "https://www.auraeventmanagement.ae"
 
 def ver(path):
     return hashlib.md5((pathlib.Path(__file__).parent / path).read_bytes()).hexdigest()[:10]
@@ -27,8 +27,39 @@ minify()
 WA_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M3.5 20.5l1.3-4.2A8.5 8.5 0 1 1 8 19.4z" stroke-linejoin="round"/><path d="M9 8.6c.2-.5.5-.6.8-.6h.5c.2 0 .4.1.5.4l.7 1.6c.1.2 0 .4-.1.6l-.5.6c-.1.1-.1.3 0 .5.6 1 1.4 1.8 2.4 2.4.2.1.4.1.5 0l.6-.5c.2-.1.4-.2.6-.1l1.6.7c.3.1.4.3.4.5v.5c0 .3-.1.6-.6.8-.6.3-1.6.5-3-.2a9 9 0 0 1-3.9-3.9c-.7-1.4-.5-2.4-.2-3z" fill="currentColor" stroke="none"/></svg>'
 STAR = '<svg class="ornament" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true"><path d="M20 2v36M2 20h36M7.3 7.3l25.4 25.4M32.7 7.3L7.3 32.7"/><circle cx="20" cy="20" r="3.2" fill="currentColor"/><circle cx="20" cy="20" r="9"/></svg>'
 
-PATHS = {"home": "/", "work": "/work", "enquire": "/enquire", "404": "/404"}
-def head(title, desc, page):
+PATHS = {"home": "/", "services": "/services", "work": "/work", "enquire": "/enquire", "404": "/404"}
+CRUMB = {"services": "Services", "work": "Portfolio", "enquire": "Enquire"}
+AREAS = ["Dubai", "Sharjah", "Abu Dhabi", "Ajman", "Ras Al Khaimah", "Umm Al Quwain", "Fujairah"]
+SERVICES_LD = ["Christmas tree decoration", "Christmas door and entrance garlands", "Outdoor Christmas lights for villas",
+               "Christmas table and mantel décor", "Corporate, hotel and café Christmas décor", "Christmas décor installation and take-down"]
+
+def ld_json(page, title, desc, url, extra=None):
+    biz = {
+        "@type": "LocalBusiness", "@id": SITE_URL + "/#business", "name": "Aura Event Management",
+        "alternateName": "Aura", "description": "Bespoke Christmas decoration services for villas, homes, hotels and offices across Dubai, Sharjah and the UAE — design, installation and take-down.",
+        "url": SITE_URL + "/", "image": SITE_URL + "/img/og.jpg", "logo": SITE_URL + "/assets/logo/icon-512.png",
+        "telephone": "+971521576362",
+        "address": {"@type": "PostalAddress", "streetAddress": "Business Centre, Sharjah Publishing City Free Zone",
+                    "addressLocality": "Sharjah", "addressRegion": "Sharjah", "addressCountry": "AE"},
+        "areaServed": [{"@type": "City", "name": a} for a in AREAS],
+        "contactPoint": {"@type": "ContactPoint", "telephone": "+971521576362", "contactType": "customer service",
+                         "availableLanguage": ["English", "Arabic"]},
+        "hasOfferCatalog": {"@type": "OfferCatalog", "name": "Christmas decoration services",
+                            "itemListElement": [{"@type": "Offer", "itemOffered": {"@type": "Service", "name": n}} for n in SERVICES_LD]},
+        "knowsAbout": ["Christmas tree decoration", "Christmas decorations Dubai", "Holiday décor installation", "Outdoor Christmas lighting"],
+    }
+    site = {"@type": "WebSite", "@id": SITE_URL + "/#website", "url": SITE_URL + "/", "name": "Aura Event Management",
+            "publisher": {"@id": SITE_URL + "/#business"}, "inLanguage": "en-AE"}
+    webpage = {"@type": "WebPage", "@id": url + "#webpage", "url": url, "name": title, "description": desc,
+               "isPartOf": {"@id": SITE_URL + "/#website"}, "about": {"@id": SITE_URL + "/#business"}, "inLanguage": "en-AE"}
+    graph = [biz, site, webpage]
+    if page in CRUMB:
+        graph.append({"@type": "BreadcrumbList", "itemListElement": [
+            {"@type": "ListItem", "position": 1, "name": "Home", "item": SITE_URL + "/"},
+            {"@type": "ListItem", "position": 2, "name": CRUMB[page], "item": url}]})
+    if extra: graph += extra
+    return json.dumps({"@context": "https://schema.org", "@graph": graph}, ensure_ascii=False).replace("</", "<\\/")
+def head(title, desc, page, extra_ld=None):
     url = SITE_URL + PATHS[page]
     robots = '<meta name="robots" content="noindex">' if page == "404" else f'<link rel="canonical" href="{url}">'
     css_v, js_v = ver("assets/aura.min.css"), ver("assets/aura.min.js")
@@ -65,7 +96,7 @@ def head(title, desc, page):
 {lcp}
 <link rel="stylesheet" href="/assets/aura.min.css?v={css_v}">
 <script src="/assets/boot.js?v={ver("assets/boot.js")}"></script>
-<script type="application/ld+json">{{"@context":"https://schema.org","@type":"LocalBusiness","name":"Aura Event Management","description":"Bespoke Christmas décor and installation across Dubai and the UAE.","url":"{SITE_URL}","image":"{SITE_URL}/img/og.jpg","logo":"{SITE_URL}/assets/logo/apple-touch-icon.png","telephone":"+971521576362","contactPoint":{{"@type":"ContactPoint","telephone":"+971521576362","contactType":"customer service","availableLanguage":["English","Arabic"]}},"address":{{"@type":"PostalAddress","streetAddress":"Business Centre, Sharjah Publishing City Free Zone","addressLocality":"Sharjah","addressCountry":"AE"}},"areaServed":"United Arab Emirates"}}</script>
+<script type="application/ld+json">{ld_json(page, title, desc, url, extra_ld)}</script>
 </head>
 <body data-page="{page}">
 <a class="skip" href="#main">Skip to content</a>
@@ -74,6 +105,7 @@ def head(title, desc, page):
     <a class="brand" href="/" aria-label="Aura Event Management — home"><span class="brand-lock"><svg class="brand-logo" xmlns="http://www.w3.org/2000/svg" viewBox="-2 0 413.13 134.60" role="img" aria-label="Aura"><path d="M42.50 33.60 L46.28 33.60 L9.80 133.60 L6.02 133.60Z" fill="currentColor"/><path d="M42.50 33.60 L46.20 33.60 L80.00 133.60 L64.82 133.60Z" fill="currentColor"/><path d="M-0.50 133.60 L20.00 133.60 L20.00 130.77 L-0.50 130.77Z" fill="currentColor"/><path d="M58.00 133.60 L90.50 133.60 L90.50 130.77 L58.00 130.77Z" fill="currentColor"/><path d="M21.04 97.60 Q39.41 115.60 57.78 97.60" fill="none" stroke="currentColor" stroke-width="3.97" stroke-linecap="butt"/><path d="M43.95 3.00 L46.79 13.08 L52.74 15.92 L46.79 18.77 L43.95 36.60 L41.11 18.77 L35.16 15.92 L41.11 13.08 L43.95 3.00Z" fill="#C8A45E"/><path d="M195.00449341535568 33.599999999999994V34.60024820963541H181.99400880336762V102.93333333333332Q181.99400880336762 119.39999999999999 174.91515280207 127.48952026367186Q167.83629680077235 135.57904052734375 151.99430461327236 135.57904052734375Q134.60166138410568 135.57904052734375 126.5193371653557 127.88952026367187Q118.43701294660569 120.19999999999999 118.43701294660569 102.93333333333332V34.60024820963541H106.5V33.599999999999994H145.17275513410567V34.60024820963541H131.83942180077236V101.6Q131.83942180077236 108.19999999999999 132.79102066762937 114.07882749946478Q133.74261953448638 119.95765499892958 136.2132561962574 124.45814349166119Q138.6838928580284 128.9586319843928 143.20523122481748 131.53731585939727Q147.72656959160656 134.1159997344017 154.86133549213412 134.1159997344017Q163.50108972390493 134.1159997344017 169.31241397261618 130.7757537662983Q175.12373822132747 127.43550779819488 178.0683490097523 120.5353409687678Q181.0129597981771 113.6351741393407 181.0129597981771 102.93333333333332V34.60024820963541H168.5249573111534V33.599999999999994Z" fill="currentColor"/><path d="M239.00625368356705 82.6828710079193V82.01709422667821H258.9496333725484Q265.3503273730224 82.01709422667821 269.8125646096838 79.20143402616182Q274.27480184634527 76.38577382564544 276.59413778384527 71.11846485451568Q278.91347372134527 65.85115588338591 278.91347372134527 58.52769806782405Q278.91347372134527 51.20504181782404 276.59413778384527 45.8285582780838Q274.27480184634527 40.452074738343555 269.802994132429 37.52616147398948Q265.3311864185127 34.60024820963541 258.94938396612804 34.60024820963541H215.00449341535568V33.599999999999994H259.2300284790717Q269.3803997706377 33.599999999999994 276.95717702463287 36.22690468231836Q284.533954278628 38.85380936463673 288.71671856443083 44.357420382897054Q292.8994828502337 49.861031401157376 292.8994828502337 58.52769806782405Q292.8994828502337 67.1943647344907 288.98382529815035 72.51200461065308Q285.06816774606705 77.82964448681545 277.5570063058959 80.25625774736739Q270.04584486572486 82.6828710079193 259.22933188279467 82.6828710079193ZM215.00449341535568 133.6V132.59975179036456H257.4733695546786V133.6ZM229.51627320051193 133.0684366861979V34.247638674577075H242.89860271612804V133.0684366861979ZM291.89599854946135 134.29466145833334Q286.01201417446134 134.29466145833334 282.724090997378 132.13648917533396Q279.4361678202947 129.9783168923346 277.9387068827947 126.31146600060839Q276.44124594529467 122.64461510888219 276.0605818827947 118.0863743514289Q275.6799178202947 113.52813359397561 275.6146508932114 108.66181933131872Q275.54938396612806 103.79550506866183 275.09111573696134 99.23726431120855Q274.6328475077947 94.67902355375526 273.0440454244614 91.00878811548294Q271.45524334112804 87.33855267721063 267.96343486771286 85.17838762381497Q264.47162639429763 83.01822257041931 258.33793047421767 83.01822257041931H239.00625368356705V82.3952448685964H261.67724854946135Q271.36117774777944 82.3952448685964 277.06217053400144 85.13184684515Q282.7631633202235 87.8684488217036 285.59209885994596 92.36175733407339Q288.4210343996684 96.85506584644317 289.3650889615218 102.23926914135615Q290.3091435233752 107.62347243626911 290.35931664903956 113.00767573118209Q290.40948977470396 118.39187902609507 290.57294211586316 122.88518753846486Q290.73639445702236 127.37849605083466 291.9944211939971 130.11509802738826Q293.2524479309718 132.85170000394186 296.7255432486534 132.85170000394186Q298.85887658198675 132.85170000394186 300.663462549448 132.3912343164285Q302.4680485169093 131.93076862891513 303.8479691783587 131.26410196224847L304.23193604946135 132.13189697265625Q302.6319360494614 132.99856363932292 299.4709167838097 133.64661254882813Q296.309897518158 134.29466145833334 291.89599854946135 134.29466145833334Z" fill="currentColor"/><path d="M361.13 33.60 L364.91 33.60 L328.43 133.60 L324.65 133.60Z" fill="currentColor"/><path d="M361.13 33.60 L364.83 33.60 L398.63 133.60 L383.45 133.60Z" fill="currentColor"/><path d="M318.13 133.60 L338.63 133.60 L338.63 130.77 L318.13 130.77Z" fill="currentColor"/><path d="M376.63 133.60 L409.13 133.60 L409.13 130.77 L376.63 130.77Z" fill="currentColor"/><path d="M339.67 97.60 Q358.05 115.60 376.42 97.60" fill="none" stroke="currentColor" stroke-width="3.97" stroke-linecap="butt"/></svg><span class="brand-sub">Event Management</span></span></a>
     <div class="nav-links">
       <button class="snow-toggle" type="button" aria-pressed="true" aria-label="Turn snowfall off" title="Snowfall"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><path d="M12 2v20M3.3 7l17.4 10M3.3 17L20.7 7"/><path d="M9.5 3.8L12 6l2.5-2.2M9.5 20.2L12 18l2.5 2.2M3.6 10.1l3.3.8-1 3.2M20.4 13.9l-3.3-.8 1-3.2M5.9 18.2l1-3.3-3.3-.7M18.1 5.8l-1 3.3 3.3.7"/></svg></button>
+      <a href="/services"{' aria-current="page"' if page=="services" else ""}>Services</a>
       <a href="/work"{' aria-current="page"' if page=="work" else ""}>Work</a>
       <a href="/enquire"{' aria-current="page"' if page=="enquire" else ""}>Enquire</a>
       <a class="btn btn-velvet nav-cta" data-wa="Hi Aura, I'd like to plan Christmas décor.">{WA_ICON}WhatsApp</a>
@@ -102,11 +134,11 @@ def foot(float_btn=True):
       </div>
       <div class="foot-col">
         <h2 class="foot-h">Explore</h2>
-        <p><a href="/">Home</a><br><a href="/work">The work</a><br><a href="/enquire">Plan your Christmas</a></p>
+        <p><a href="/">Home</a><br><a href="/services">Christmas decoration services</a><br><a href="/work">Portfolio</a><br><a href="/enquire">Plan your Christmas</a></p>
       </div>
     </div>
     <div class="foot-mark"><svg class="foot-logo" role="img" aria-label="Aura Event Management — أورا" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 610.96 405.60"><g transform="translate(60.00 85.20)"><path d="M51.00 0.00 L54.36 0.00 L11.76 120.00 L8.40 120.00Z" fill="currentColor"/><path d="M51.00 0.00 L55.44 0.00 L96.00 120.00 L77.78 120.00Z" fill="currentColor"/><path d="M-0.60 120.00 L24.00 120.00 L24.00 117.48 L-0.60 117.48Z" fill="currentColor"/><path d="M69.60 120.00 L108.60 120.00 L108.60 117.48 L69.60 117.48Z" fill="currentColor"/><path d="M25.42 76.80 Q47.38 98.40 69.34 76.80" fill="none" stroke="currentColor" stroke-width="3.53" stroke-linecap="butt"/><path d="M52.74 -22.56 L54.58 -14.71 L59.33 -12.87 L54.58 -11.03 L52.74 2.64 L50.90 -11.03 L46.15 -12.87 L50.90 -14.71 L52.74 -22.56Z" fill="#C8A45E"/><path d="M234.00539209842685 0.0V1.200297851562496H218.39281056404116V83.19999999999999Q218.39281056404116 102.96000000000001 209.898183362484 112.66742431640625Q201.40355616092683 122.3748486328125 182.39316553592684 122.3748486328125Q161.52199366092682 122.3748486328125 151.82320459842683 113.14742431640624Q142.12441553592683 103.92 142.12441553592683 83.19999999999999V1.200297851562496H127.80000000000001V0.0H174.20730616092683V1.200297851562496H158.20730616092683V81.6Q158.20730616092683 89.52 159.34922480115523 96.57459299935775Q160.49114344138366 103.62918599871551 163.4559074355089 109.02977218999344Q166.42067142963413 114.43035838127136 171.846277469781 117.5247790312767Q177.27188350992787 120.61919968128204 185.83360259056093 120.61919968128204Q196.20130766868593 120.61919968128204 203.17489676713944 116.61090451955795Q210.148485865593 112.60260935783386 213.68201881170276 104.32240916252135Q217.21555175781253 96.04220896720886 217.21555175781253 83.19999999999999V1.200297851562496H202.2299487733841V0.0Z" fill="currentColor"/><path d="M286.8075044202805 58.89944520950317V58.100513072013854H310.7395600470581Q318.42039284762694 58.100513072013854 323.7750775316207 54.721720831394194Q329.1297622156144 51.342928590774534 331.9129653406144 45.022157825418816Q334.6961684656144 38.7013870600631 334.6961684656144 29.91323768138885Q334.6961684656144 21.126050181388848 331.9129653406144 14.674269933700558Q329.1297622156144 8.222489686012267 323.76359295891484 4.7113937687873815Q318.3974237022153 1.200297851562496 310.73926075935367 1.200297851562496H258.00539209842685V0.0H311.07603417488605Q323.2564797247653 0.0 332.34861242955947 3.152285618782045Q341.4407451343537 6.30457123756409 346.4600622773171 12.908904459476474Q351.4793794202805 19.51323768138886 351.4793794202805 29.91323768138885Q351.4793794202805 40.313237681388856 346.7805903577805 46.694405532783705Q342.0818012952805 53.075573384178554 333.06840756707516 55.98750929684086Q324.05501383886985 58.89944520950317 311.07519825935367 58.89944520950317ZM258.00539209842685 120.0V118.7997021484375H308.96804346561436V120.0ZM275.41952784061436 119.3621240234375V0.7771664094924944H291.4783232593537V119.3621240234375ZM350.2751982593537 120.83359375Q343.21441700935367 120.83359375 339.26890919685366 118.24378701040077Q335.3234013843537 115.65398027080153 333.5264482593537 111.25375920073009Q331.72949513435367 106.85353813065863 331.27269825935366 101.38364922171469Q330.81590138435365 95.91376031277075 330.7375810718537 90.07418319758247Q330.6592607593537 84.2346060823942 330.1093388843537 78.76471717345024Q329.5594170093537 73.2948282645063 327.6528545093537 68.89054573857953Q325.7462920093537 64.48626321265277 321.55612184125545 61.89406514857797Q317.3659516731572 59.30186708450317 310.00551656906123 59.30186708450317H286.8075044202805V58.55429384231567H314.01269825935367Q325.6334132973353 58.55429384231567 332.4746046408018 61.838216214179994Q339.3157959842682 65.12213858604431 342.71051863193514 70.51410880088807Q346.10524127960207 75.90607901573182 347.2381067538262 82.36712296962739Q348.3709722280503 88.82816692352296 348.4311799788476 95.28921087741853Q348.4913877296448 101.7502548313141 348.68753053903583 107.14222504615785Q348.8836733484269 112.53419526100159 350.3933054327965 115.8181176328659Q351.90293751716615 119.10204000473023 356.07065189838414 119.10204000473023Q358.63065189838414 119.10204000473023 360.79615505933765 118.5494811797142Q362.96165822029116 117.99692235469819 364.6175630140305 117.19692235469819L365.0783232593537 118.2382763671875Q363.15832325935366 119.2782763671875 359.3651001405716 120.05593505859375Q355.5718770217896 120.83359375 350.2751982593537 120.83359375Z" fill="currentColor"/><path d="M433.36 0.00 L436.72 0.00 L394.12 120.00 L390.76 120.00Z" fill="currentColor"/><path d="M433.36 0.00 L437.80 0.00 L478.36 120.00 L460.14 120.00Z" fill="currentColor"/><path d="M381.76 120.00 L406.36 120.00 L406.36 117.48 L381.76 117.48Z" fill="currentColor"/><path d="M451.96 120.00 L490.96 120.00 L490.96 117.48 L451.96 117.48Z" fill="currentColor"/><path d="M407.77 76.80 Q429.74 98.40 451.70 76.80" fill="none" stroke="currentColor" stroke-width="3.53" stroke-linecap="butt"/></g><line x1="60.00" y1="271.20" x2="239.78" y2="271.20" stroke="#C8A45E" stroke-width="1.44"/><line x1="371.18" y1="271.20" x2="550.96" y2="271.20" stroke="#C8A45E" stroke-width="1.44"/><g transform="translate(266.18 283.20)"><path d="M3.78 -33.839999999999996 5.46 -9.0Q5.52 -8.459999999999999 6.0 -8.37Q6.4799999999999995 -8.28 6.72 -8.7L11.16 -15.66L9.48 -40.559999999999995Q9.42 -41.1 8.94 -41.19Q8.459999999999999 -41.28 8.16 -40.86Z M32.1 -17.52Q31.14 -17.52 30.9 -16.74Q29.58 -13.86 27.18 -12.24Q24.42 -10.44 21.09 -9.18Q17.759999999999998 -7.92 14.339999999999998 -6.84Q13.02 -6.42 11.91 -6.029999999999999Q10.799999999999999 -5.64 9.959999999999999 -5.34Q9.12 -5.04 8.129999999999999 -4.62Q7.139999999999999 -4.2 6.419999999999999 -3.63Q5.699999999999999 -3.06 5.699999999999999 -2.28Q5.699999999999999 -1.68 5.999999999999999 -1.38Q6.839999999999999 -0.6 9.54 -0.36Q12.059999999999999 -0.12 15.479999999999999 0.0H16.02Q20.4 0.0 23.369999999999997 -1.38Q26.339999999999996 -2.76 28.379999999999995 -5.1Q29.4 -6.359999999999999 30.27 -8.219999999999999Q31.14 -10.08 31.86 -12.239999999999998Q32.58 -14.399999999999999 33.0 -16.32V-16.56Q32.879999999999995 -17.46 32.1 -17.52Z M52.56 -15.959999999999999V-16.02Q53.64 -14.7 56.28 -14.7Q57.239999999999995 -14.7 58.019999999999996 -14.879999999999999Q58.14 -14.639999999999999 58.199999999999996 -14.459999999999999Q58.199999999999996 -14.399999999999999 58.199999999999996 -14.309999999999999Q58.199999999999996 -14.219999999999999 58.199999999999996 -14.1Q58.199999999999996 -14.04 58.23 -14.009999999999998Q58.26 -13.979999999999999 58.26 -13.979999999999999V-13.92Q56.64 -12.12 54.17999999999999 -11.1Q49.199999999999996 -9.06 44.03999999999999 -7.08Q38.879999999999995 -5.1 34.32 -2.58Q33.78 -2.2199999999999998 33.78 -1.5Q33.78 -0.6 34.739999999999995 -0.48Q36.48 -0.36 38.28 -0.18Q40.08 0.0 41.879999999999995 0.0Q42.12 0.0 42.17999999999999 0.0Q42.239999999999995 0.0 42.48 0.0Q43.98 0.0 45.3 -0.12Q46.62 -0.24 47.94 -0.48Q50.94 -1.08 53.459999999999994 -2.79Q55.98 -4.5 57.989999999999995 -6.81Q60.0 -9.12 61.31999999999999 -11.58Q62.22 -13.32 62.879999999999995 -15.45Q63.53999999999999 -17.58 63.599999999999994 -19.98V-20.34Q63.599999999999994 -24.48 60.72 -27.419999999999998Q60.3 -27.84 59.61 -28.259999999999998Q58.92 -28.68 58.08 -28.68Q57.3 -28.68 56.519999999999996 -27.9Q55.44 -26.7 54.72 -25.229999999999997Q54.0 -23.759999999999998 53.28 -22.2Q52.86 -21.36 52.29 -20.25Q51.72 -19.14 51.72 -18.06Q51.72 -17.34 51.959999999999994 -16.86Q52.199999999999996 -16.38 52.56 -15.959999999999999Z M73.92 -54.06 75.17999999999999 -56.7Q75.36 -57.18 75.03 -57.54Q74.7 -57.9 74.22 -57.66Q73.08 -57.120000000000005 72.50999999999999 -56.67Q71.94 -56.22 71.03999999999999 -55.2Q70.56 -54.66 69.69 -53.67Q68.82 -52.68 68.16 -51.57Q67.5 -50.46 67.5 -49.56Q67.5 -48.18 68.94 -47.34Q69.3 -47.1 69.69 -46.980000000000004Q70.08 -46.86 70.38 -46.56Q69.6 -46.14 68.63999999999999 -45.75Q67.67999999999999 -45.36 66.84 -44.94L65.58 -44.4Q65.03999999999999 -44.160000000000004 65.25 -43.56Q65.46 -42.96 66.0 -43.02Q66.78 -43.14 67.5 -43.29Q68.22 -43.44 69.0 -43.5Q70.86 -43.800000000000004 72.44999999999999 -45.09Q74.03999999999999 -46.38 74.64 -47.88Q74.88 -48.36 74.88 -49.14Q74.88 -49.980000000000004 74.34 -50.58Q73.8 -51.18 73.02 -51.480000000000004Q72.72 -51.6 72.24 -51.72Q71.75999999999999 -51.84 71.46 -52.02Q71.58 -52.14 71.66999999999999 -52.2Q71.75999999999999 -52.26 71.88 -52.32Q72.53999999999999 -52.68 73.07999999999998 -53.04Q73.61999999999999 -53.4 73.92 -54.06Z M67.5 -33.839999999999996 69.17999999999999 -9.0Q69.24 -8.459999999999999 69.72 -8.37Q70.2 -8.28 70.44 -8.7L74.88 -15.66L73.2 -40.559999999999995Q73.14 -41.1 72.66 -41.19Q72.17999999999999 -41.28 71.88 -40.86Z" fill="#C8A45E"/></g><g transform="translate(50.73 0)"><path d="M2.499991861979167 345.6V322.3666666666667H17.859995524088543V325.4066914876302H5.893353271484375V332.2066528320313H16.853336588541666V335.24667765299483H5.893353271484375V342.5599751790365H17.859995524088543V345.6Z M40.52666219075521 345.6 31.23999430338542 322.3666666666667H34.98002522786459L42.34001057942709 341.45996500651046H41.333333333333336L48.58665161132812 322.3666666666667H52.333349609375006L43.10668131510417 345.6Z M66.63332519531251 345.6V322.3666666666667H81.99332885742189V325.4066914876302H70.02668660481771V332.2066528320313H80.986669921875V335.24667765299483H70.02668660481771V342.5599751790365H81.99332885742189V345.6Z M97.39999186197917 345.6V322.3666666666667H100.94668579101562L112.49333089192709 341.18662923177084H111.68665568033855V322.3666666666667H115.08001708984375V345.6H111.47332356770833L99.99334513346355 326.7467041015625H100.79335327148438V345.6Z M136.9533182779948 345.6V325.4066914876302H129.35333048502605V322.3666666666667H147.95333455403647V325.4066914876302H140.38668009440104V345.6Z  M182.26665852864585 345.6V322.3666666666667H187.2600321451823L194.16667480468752 340.2333028157552H193.55333658854167L200.4599792480469 322.3666666666667H205.42668660481772V345.6H202.0333251953125V326.31336669921876L202.31999511718752 326.36003417968755L195.51335245768232 343.60666503906253H192.2066589355469L185.37335001627605 326.36003417968755L185.66001993815107 326.31336669921876V345.6Z M219.73332722981772 345.6 228.7600036621094 322.3666666666667H231.3933553059896L240.41336466471355 345.6H236.71333414713544L230.10667928059897 327.2867106119792L223.46002400716148 345.6ZM225.06668497721355 340.4400187174479 226.11336059570314 337.3999938964844H234.03999837239584L235.1533406575521 340.4400187174479Z M254.73332519531252 345.6V322.3666666666667H258.280019124349L269.8266642252604 341.18662923177084H269.0199890136719V322.3666666666667H272.4133504231771V345.6H268.80665690104166L257.32667846679686 326.7467041015625H258.12668660481773V345.6Z M286.6999938964844 345.6 295.72667032877604 322.3666666666667H298.3600219726563L307.3800313313802 345.6H303.6800008138021L297.07334594726564 327.2867106119792L290.42669067382815 345.6ZM292.0333516438802 340.4400187174479 293.0800272623698 337.3999938964844H301.0066650390625L302.12000732421876 340.4400187174479Z M331.40666503906255 346.0400024414063Q328.2599975585938 346.0400024414063 325.85666300455733 344.53333536783856Q323.45332845052087 343.02666829427085 322.0999938964844 340.3033345540365Q320.74665934244797 337.5800008138021 320.74665934244797 333.9666666666667Q320.74665934244797 330.35333251953125 322.11332702636724 327.64666544596355Q323.4799947102865 324.93999837239585 325.9266632080079 323.43333129882814Q328.3733317057292 321.9266642252604 331.60666707356773 321.9266642252604Q335.17333780924486 321.9266642252604 337.7800069173178 323.69666646321616Q340.38667602539067 325.4666687011719 341.5333435058594 328.59333902994797L338.35998331705736 329.7733479817709Q337.5333190917969 327.5866861979167 335.80332336425784 326.376688639323Q334.0733276367188 325.1666910807292 331.60666707356773 325.1666910807292Q329.3400065104167 325.1666910807292 327.65001118977864 326.2466878255209Q325.96001586914065 327.3266845703125 325.0500183105469 329.28667907714845Q324.14002075195316 331.2466735839844 324.14002075195316 333.9666666666667Q324.14002075195316 336.68665974934896 325.0500183105469 338.66332092285154Q325.96001586914065 340.6399820963542 327.65001118977864 341.71997884114586Q329.3400065104167 342.79997558593755 331.60666707356773 342.79997558593755Q332.7666646321615 342.79997558593755 333.9866617838542 342.47664286295577Q335.2066589355469 342.153310139974 336.2366566975912 341.34997863769536Q337.26665445963545 340.54664713541666 337.89665323893234 339.13331604003906Q338.5266520182292 337.71998494466146 338.5266520182292 335.5466552734375V333.9666625976563L339.2933247884115 336.3000162760417H332.7133219401042V333.25999145507814H341.5333435058594V345.6H338.5333190917969L338.06664835611986 341.3200154622396L338.64665323893234 341.76001993815106Q338.0399861653646 343.2333455403646 336.9433217366537 344.1766754150391Q335.84665730794273 345.12000528971356 334.4166605631511 345.5800038655599Q332.98666381835943 346.0400024414063 331.40666503906255 346.0400024414063Z M357.43332519531253 345.6V322.3666666666667H372.79332885742195V325.4066914876302H360.8266866048178V332.2066528320313H371.78666992187505V335.24667765299483H360.8266866048178V342.5599751790365H372.79332885742195V345.6Z M388.1999918619792 345.6V322.3666666666667H393.19336547851566L400.1000081380209 340.2333028157552H399.48666992187503L406.39331258138026 322.3666666666667H411.3600199381511V345.6H407.9666585286459V326.31336669921876L408.2533284505209 326.36003417968755L401.4466857910157 343.60666503906253H398.13999226888023L391.30668334960944 326.36003417968755L391.59335327148443 326.31336669921876V345.6Z M427.6999918619792 345.6V322.3666666666667H443.0599955240886V325.4066914876302H431.09335327148443V332.2066528320313H442.0533365885417V335.24667765299483H431.09335327148443V342.5599751790365H443.0599955240886V345.6Z M458.46665852864584 345.6V322.3666666666667H462.01335245768234L473.55999755859375 341.18662923177084H472.7533223470052V322.3666666666667H476.14668375651047V345.6H472.539990234375L461.0600118001302 326.7467041015625H461.8600199381511V345.6Z M498.0199849446615 345.6V325.4066914876302H490.4199971516927V322.3666666666667H509.02000122070314V325.4066914876302H501.45334676106773V345.6Z" fill="#C8A45E"/></g></svg></div>
-    <div class="foot-base"><span>© <span data-year>2026</span> Aura Event Management</span><span>Christmas décor · Dubai, Sharjah &amp; across the UAE</span></div>
+    <div class="foot-base"><span>© <span data-year>2026</span> Aura Event Management</span><span>Christmas decorations in Dubai, Sharjah, Abu Dhabi, Ajman &amp; across the UAE</span></div>
   </div>
 </footer>
 {WAF if float_btn else ""}
@@ -144,8 +176,8 @@ pal_tabs = "\n".join(
 pal_imgs = "\n".join(pic(img, alt, "(min-width:900px) 50vw, 100vw", extra=' class="is-on"' if i==0 else '') for i,(n,img,d,no,cs,alt) in enumerate(PALETTES))
 
 DRESS = [
-  ("nutcracker-tree","The tree","Any height, flocked or evergreen, dressed layer by layer in the palette you choose.","A tall red, white and gold Christmas tree with a nutcracker beside it"),
-  ("arch-velvet","The entrance","Garland arches and door swags that greet your guests before the bell.","A full garland arch in velvet baubles framing a wooden front door"),
+  ("nutcracker-tree","Christmas trees","Any height, flocked or evergreen, dressed layer by layer in the palette you choose.","A tall red, white and gold Christmas tree with a nutcracker beside it"),
+  ("arch-velvet","Entrances &amp; door garlands","Garland arches and door swags that greet your guests before the bell.","A full garland arch in velvet baubles framing a wooden front door"),
   ("wreath-console","Table &amp; mantel","Wreaths, console garlands and centrepieces, finished with velvet ribbon and candlelight.","A wreath above a console dressed with a garland, velvet ribbon and candles"),
   ("cafe-garlands","Cafés, hotels &amp; offices","Counters, lobbies and dining rooms dressed to welcome guests all season.","A café counter wrapped in garlands with hanging glass baubles"),
 ]
@@ -154,13 +186,13 @@ dress_cards = "\n".join(f'''<article class="card">
   <div class="card-body"><h3 class="h3">{t}</h3><p>{d}</p></div>
 </article>''' for img,t,d,alt in DRESS)
 
-home = head("Aura Event Management — Christmas Décor in Dubai & the UAE", "Aura Event Management dresses villas, homes and lobbies for Christmas across Dubai and the UAE — bespoke trees, garland arches and tablescapes, designed, installed and taken down for you.", "home") + f'''
+home = head("Luxury Christmas Decorations in Dubai & UAE | Aura Event Management", "Luxury Christmas decorations for villas, homes and businesses in Dubai, Sharjah and the UAE — trees, door garlands and lights, installed and taken down.", "home") + f'''
 <section class="hero">
   <div class="wrap hero-grid">
     <div class="hero-copy">
       <span class="eyebrow" data-intro>Christmas décor · Dubai &amp; the UAE</span>
       <h1 class="display hero-title"><span class="line"><span>Christmas</span></span><span class="line"><span>begins</span></span><span class="line"><span><em>at the door.</em></span></span></h1>
-      <p class="lede" data-intro>Bespoke Christmas décor for villas, homes and lobbies across Dubai and the UAE — designed, installed and taken down by us, so all you do is come home to it.</p>
+      <p class="lede" data-intro>Luxury Christmas decorations for villas, homes and lobbies across Dubai, Sharjah and the UAE — designed, installed and taken down by us, so all you do is come home to it.</p>
       <div class="hero-actions" data-intro>
         <a class="btn btn-velvet" data-wa="Hi Aura, I'd like to plan Christmas décor for this year.">{WA_ICON}Plan on WhatsApp</a>
         <a class="link-u" href="/work">See the work <span class="arrow">→</span></a>
@@ -190,7 +222,7 @@ home = head("Aura Event Management — Christmas Décor in Dubai & the UAE", "Au
   <div class="wrap">
     <div class="s-head">
       <h2 class="display h2" data-reveal>What we dress</h2>
-      <p class="lede" data-reveal>One statement piece or the whole house — every installation is designed for the room it lives in.</p>
+      <p class="lede" data-reveal>From a single Christmas tree to the whole house — every installation is designed for the room it lives in. <a class="link-u" href="/services">All Christmas decoration services <span class="arrow">→</span></a></p>
     </div>
     <div class="rail">
 {dress_cards}
@@ -324,7 +356,7 @@ WORK = [
   ("living-room-tree","Living room classic","trees"),
 ]
 tiles = "\n".join(f'''<button class="tile frame frame-soft" data-cat="{c}" type="button"><figure style="margin:0">{pic(img, t.replace("&amp;","and") + " — Christmas décor by Aura", "(min-width:900px) 33vw, 50vw", eager=i < 2)}<figcaption>{t}</figcaption></figure></button>''' for i,(img,t,c) in enumerate(WORK))
-work = head("Portfolio — Aura Event Management", "A portfolio of Christmas trees, garland arches and tablescapes by Aura Event Management across Dubai and the UAE.", "work") + f'''
+work = head("Christmas Decoration Portfolio — Dubai & UAE | Aura Event Management", "Christmas trees, entrance arches, door garlands, tablescapes and outdoor lighting we have installed for homes, villas and businesses across Dubai, Sharjah and the UAE.", "work") + f'''
 <section class="wrap page-head">
   <span class="eyebrow" data-intro>Portfolio · Season <span data-year>2026</span></span>
   <h1 class="display page-title"><span class="line"><span>The <em>work.</em></span></span></h1>
@@ -365,7 +397,7 @@ def chips(name, opts, kind="radio"):
     return '<div class="chips">' + "".join(
         f'<label><input type="{kind}" name="{name}" id="{name}-{i}" value="{o}"><span class="chip">{o}</span></label>' for i,o in enumerate(opts)) + '</div>'
 
-enquire = head("Enquire — Aura Event Management", "Plan your Christmas décor with Aura Event Management — tell us about your space and we'll reply on WhatsApp.", "enquire") + f'''
+enquire = head("Book Christmas Decorations in Dubai & UAE | Aura Event Management", "Book your Christmas decoration installation in Dubai, Sharjah or anywhere in the UAE. Tell us about your space and get ideas and a quote on WhatsApp.", "enquire") + f'''
 <section class="wrap page-head">
   <span class="eyebrow" data-intro>Enquire</span>
   <h1 class="display page-title"><span class="line"><span>Plan your</span></span><span class="line"><span><em>Christmas.</em></span></span></h1>
@@ -409,6 +441,83 @@ enquire = head("Enquire — Aura Event Management", "Plan your Christmas décor 
 </section>
 ''' + foot(False)
 
+# ---------------------------------------------------------------- SERVICES
+SERVICES = [
+  ("trees", "nutcracker-tree", "Christmas tree decoration", "Dubai, Sharjah &amp; UAE",
+   "A Christmas tree is the heart of the season, so we treat it like a centrepiece. We supply full, natural-looking trees — flocked, evergreen or pre-lit, in any height your ceiling allows — and dress them layer by layer: lights first, then ribbon, ornaments, picks and a topper, all in the palette you choose.",
+   ["Tree supplied, or your own tree restyled", "Seven signature palettes, or a custom colour story", "Tree skirt, gift boxes and finishing pieces"],
+   "A tall Christmas tree decorated in red, white and gold beside a nutcracker, installed by Aura in Dubai"),
+  ("entrances", "arch-velvet", "Door garlands &amp; entrance arches", "Villas &amp; front doors",
+   "Your guests see the front door first. We build full garland arches, door swags, wreaths and flanking trees that frame the entrance of villas, townhouses and apartments — sized to the doorway and secured without damaging paint or stone.",
+   ["Garland arches and door swags", "Wreaths and planters for either side", "Balcony and staircase garlands"],
+   "A full garland arch of velvet baubles framing a wooden front door"),
+  ("outdoor", "villa-lights-night", "Outdoor Christmas lights", "Façades, gardens &amp; driveways",
+   "Rooflines, balconies, palm trees and driveways outlined in warm white light. Outdoor installations are planned for the UAE winter, with outdoor-rated lighting and wiring kept neatly out of sight.",
+   ["Roofline and balcony lighting", "Wrapped palms and garden trees", "Lit pathways and driveway trees"],
+   "A villa in the UAE outlined in warm Christmas lights with lit palm trees and a driveway"),
+  ("tables", "wreath-console", "Tables, mantels &amp; consoles", "Interiors",
+   "The finishing layer that makes a home feel dressed for the season: mantel garlands, console arrangements, wreaths above the fireplace and long table centrepieces for Christmas lunch.",
+   ["Mantel and console garlands", "Dining table centrepieces and runners", "Wreaths, candles and small tabletop trees"],
+   "A wreath above a console styled with a velvet-ribboned garland and candles"),
+  ("corporate", "cafe-garlands", "Corporate, hotel &amp; café Christmas décor", "Businesses",
+   "Lobbies, reception desks, restaurants, cafés, showrooms and offices dressed to welcome guests all season. We work around your opening hours and brand colours, and schedule installation to cause minimal disruption.",
+   ["Lobby and reception trees", "Counters, ceilings and window garlands", "Installation outside business hours on request"],
+   "A café counter wrapped in Christmas garlands with hanging glass baubles"),
+]
+FAQS = [
+  ("How much does Christmas decoration cost in Dubai?", "Every installation is quoted for the space, because a single tree and a full villa are very different projects. Send us a photo of the room or entrance on WhatsApp with the look you like, and we’ll reply with ideas and a clear quote."),
+  ("Which areas do you cover?", "We’re based in Sharjah and install across Dubai, Sharjah, Abu Dhabi, Ajman, Ras Al Khaimah and the rest of the UAE. Tell us your area and we’ll confirm dates."),
+  ("How early should I book my Christmas decorations?", "As early as you can. Late November and the first two weeks of December book up first, so messaging us in October or early November gives you the widest choice of installation dates."),
+  ("Do you remove the decorations after Christmas?", "Yes. After the holidays we come back, take everything down carefully and leave your home or business exactly as we found it."),
+  ("Can you decorate a tree or use decorations I already own?", "Often, yes. Send us a photo of what you have and we’ll suggest how to restyle it or build around it."),
+  ("Do you decorate offices, hotels and restaurants?", "Yes — lobbies, reception areas, cafés, restaurants, showrooms and offices. We can schedule installation outside business hours."),
+]
+faq_ld = [{"@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": q, "acceptedAnswer": {"@type": "Answer", "text": a}} for q, a in FAQS]}]
+svc_ld = [{"@type": "Service", "name": re.sub("&amp;", "&", t), "serviceType": "Christmas decoration", "provider": {"@id": SITE_URL + "/#business"},
+           "areaServed": [{"@type": "City", "name": a} for a in AREAS], "url": SITE_URL + "/services#" + k} for k, _, t, *_ in SERVICES]
+
+def svc_block(i, k, img, t, sub, body, pts, alt):
+    flip = " svc-flip" if i % 2 else ""
+    lis = "".join(f"<li>{x}</li>" for x in pts)
+    return f'''<article class="svc{flip}" id="{k}">
+  <figure class="svc-fig frame" data-reveal-img>{pic(img, alt, "(min-width:900px) 45vw, 100vw")}</figure>
+  <div class="svc-copy">
+    <span class="eyebrow" data-reveal>{sub}</span>
+    <h2 class="display svc-title" data-reveal>{t}</h2>
+    <p class="lede" data-reveal>{body}</p>
+    <ul class="svc-list" data-reveal>{lis}</ul>
+    <a class="link-u" data-wa="Hi Aura, I’m interested in {re.sub("&amp;", "and", t).lower()}. Can you help?" data-reveal>Ask about {re.sub("&amp;", "and", t).lower()} <span class="arrow">→</span></a>
+  </div>
+</article>'''
+
+services = head("Christmas Decoration Services in Dubai, Sharjah & UAE | Aura", "Christmas tree decoration, door garlands, outdoor Christmas lights and corporate holiday décor in Dubai, Sharjah and the UAE, with installation and take-down.", "services", faq_ld + svc_ld) + f'''
+<section class="wrap page-head">
+  <span class="eyebrow" data-intro>Services · Dubai, Sharjah &amp; the UAE</span>
+  <h1 class="display page-title svc-page-title"><span class="line"><span>Christmas decoration</span></span><span class="line"><span><em>services.</em></span></span></h1>
+  <p class="lede" data-intro>Aura Event Management designs, installs and takes down Christmas decorations for villas, apartments, hotels, cafés and offices across the UAE. Choose one piece or dress the whole property.</p>
+  <nav class="svc-jump" aria-label="Services on this page" data-intro>{"".join(f'<a class="chip" href="#{k}">{lbl}</a>' for k,lbl in (("trees","Christmas trees"),("entrances","Door garlands"),("outdoor","Outdoor lights"),("tables","Tables &amp; mantels"),("corporate","Corporate &amp; hotels")))}</nav>
+</section>
+<section class="wrap svc-list-wrap">
+{"".join(svc_block(i, *x) for i, x in enumerate(SERVICES))}
+</section>
+<section class="wrap areas">
+  <div class="s-head" style="grid-template-columns:1fr">
+    <span class="eyebrow" data-reveal>Where we install</span>
+    <h2 class="display h2" data-reveal>Across the Emirates.</h2>
+    <p class="lede" data-reveal>From our studio in Sharjah Publishing City Free Zone we install Christmas decorations in homes and businesses across the UAE, including Dubai Marina, Downtown Dubai, Palm Jumeirah, Emirates Hills, Arabian Ranches, Dubai Hills, Jumeirah, Al Barsha, Sharjah, Abu Dhabi, Ajman and Ras Al Khaimah.</p>
+  </div>
+  <ul class="area-chips" data-reveal>{"".join(f"<li>{a}</li>" for a in AREAS)}</ul>
+</section>
+<section class="wrap svc-faq">
+  <div class="s-head" style="grid-template-columns:1fr"><h2 class="display h2" data-reveal>Questions, answered.</h2></div>
+  <div class="faq" data-reveal>{"".join(f"<details><summary>{q}</summary><p>{a}</p></details>" for q, a in FAQS)}</div>
+  <div class="hero-actions" style="margin-top:36px" data-reveal>
+    <a class="btn btn-velvet" data-wa="Hi Aura, I’d like a quote for Christmas decorations.">{WA_ICON}Get a quote on WhatsApp</a>
+    <a class="link-u" href="/enquire">Plan it in detail <span class="arrow">→</span></a>
+  </div>
+</section>
+''' + foot()
+
 notfound = head("Page not found — Aura Event Management", "This page doesn't exist. Head back to Aura's Christmas décor.", "404") + f'''
 <section class="wrap page-head" style="min-height:70svh;align-content:center">
   <span class="eyebrow" data-intro>404</span>
@@ -426,7 +535,7 @@ notfound = head("Page not found — Aura Event Management", "This page doesn't e
 import datetime
 today = datetime.date.today().isoformat()
 urls = "".join(f"  <url><loc>{SITE_URL}{p}</loc><lastmod>{today}</lastmod><priority>{pr}</priority></url>\n"
-               for p, pr in (("/", "1.0"), ("/work", "0.8"), ("/enquire", "0.8")))
+               for p, pr in (("/", "1.0"), ("/services", "0.9"), ("/work", "0.8"), ("/enquire", "0.7")))
 (ROOT / "sitemap.xml").write_text(f'<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n{urls}</urlset>\n', encoding="utf-8")
 (ROOT / "site.webmanifest").write_text(json.dumps({
     "name": "Aura Event Management", "short_name": "Aura",
@@ -437,6 +546,6 @@ urls = "".join(f"  <url><loc>{SITE_URL}{p}</loc><lastmod>{today}</lastmod><prior
               {"src": "/assets/logo/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}]
 }, indent=2), encoding="utf-8")
 
-for name, doc in (("index.html", home), ("work.html", work), ("enquire.html", enquire)):
+for name, doc in (("index.html", home), ("services.html", services), ("work.html", work), ("enquire.html", enquire)):
     (ROOT / name).write_text(doc, encoding="utf-8")
 print("built")
