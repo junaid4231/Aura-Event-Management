@@ -135,6 +135,8 @@ PALETTES = [
   ("Winter White","winter-white-tree","A flocked, snow-dusted tree with frosted pine and silver — cool, calm and made for pale marble interiors.","Flocked pine|Silver|Soft red accents",["#F2EDE4","#B9BDBA","#8E1B26"],"A snow-flocked white Christmas tree in a bright modern lobby"),
   ("Candy Cane","candy-cane-tree","Peppermint stripes, oversized candy canes and sweets — playful and bright, loved by families with little ones.","Peppermint stripes|Candy canes|Gift boxes",["#C8202E","#F2EDE4","#2E5A3A"],"A playful tree decorated with red and white candy canes and sweets"),
   ("Starlight","starlight-tree","Hundreds of warm lights and falling icicle strands on bare evergreen. No colour, just glow.","Icicle strands|Micro lights|Evergreen",["#F6E7B8","#E2CB97","#1F3A2A"],"An evergreen tree lit with hundreds of warm lights and icicle strands"),
+  ("Champagne Gold","champagne-tree","Champagne, ivory and soft gold with a wall of fairy lights behind — the most luminous look for pale, modern rooms.","Champagne baubles|Ivory ribbon|Curtain lights",["#E8D7B0","#C8A45E","#F2EDE4"],"A champagne and gold tree in front of a curtain of fairy lights"),
+  ("Rosé Blush","blush-tree","Blush pink and deep red baubles on a full evergreen, topped with a velvet bow — romantic, warm and a little unexpected.","Blush pink|Ruby red|Velvet bow",["#E7A9B4","#A3202C","#2E4A37"],"A tree dressed in blush pink and red baubles with a red velvet bow on top"),
 ]
 pal_tabs = "\n".join(
   f'''<button class="pal-tab" role="tab" aria-selected="{str(i==0).lower()}" data-name="{n}" data-desc="{d}" data-notes="{no}"><span class="sw">{''.join(f'<span style="background:{c}"></span>' for c in cs)}</span>{n}</button>'''
@@ -142,10 +144,10 @@ pal_tabs = "\n".join(
 pal_imgs = "\n".join(pic(img, alt, "(min-width:900px) 50vw, 100vw", extra=' class="is-on"' if i==0 else '') for i,(n,img,d,no,cs,alt) in enumerate(PALETTES))
 
 DRESS = [
-  ("velvet-bow-tree","The tree","Any height, flocked or evergreen, dressed layer by layer in the palette you choose.","A burgundy velvet Christmas tree"),
+  ("nutcracker-tree","The tree","Any height, flocked or evergreen, dressed layer by layer in the palette you choose.","A tall red, white and gold Christmas tree with a nutcracker beside it"),
   ("arch-velvet","The entrance","Garland arches and door swags that greet your guests before the bell.","A full garland arch in velvet baubles framing a wooden front door"),
-  ("tablescape","Table &amp; mantel","Runners, centrepieces and mantel garlands for the long Christmas lunch.","A red and gold garland runner on a dark dining table"),
-  ("flocked-velvet-tree","The whole home","From the front door to the dining table — one palette, carried through every room.","A frosted tree with burgundy velvet baubles beside tall windows"),
+  ("wreath-console","Table &amp; mantel","Wreaths, console garlands and centrepieces, finished with velvet ribbon and candlelight.","A wreath above a console dressed with a garland, velvet ribbon and candles"),
+  ("cafe-garlands","Cafés, hotels &amp; offices","Counters, lobbies and dining rooms dressed to welcome guests all season.","A café counter wrapped in garlands with hanging glass baubles"),
 ]
 dress_cards = "\n".join(f'''<article class="card">
   <div class="card-media frame" data-reveal-img>{pic(img, alt, "(min-width:900px) 25vw, 78vw")}</div>
@@ -236,6 +238,16 @@ home = head("Aura Event Management — Christmas Décor in Dubai & the UAE", "Au
   </div>
 </section>
 
+<section class="showcase">
+  <figure class="showcase-fig frame" data-reveal-img>{pic("villa-lights-night","A villa and its driveway outlined in warm white lights at night","100vw")}</figure>
+  <div class="wrap showcase-copy">
+    <span class="eyebrow" data-reveal>Façades &amp; gardens</span>
+    <h2 class="display h2" data-reveal>The whole house, <em>lit.</em></h2>
+    <p class="lede" data-reveal>Rooflines, driveways, palms and balconies outlined in warm light — so your home is the one the neighbours slow down for.</p>
+    <a class="link-u" data-wa="Hi Aura, I'd like to light up the outside of my villa for Christmas." data-reveal>Plan outdoor lighting <span class="arrow">→</span></a>
+  </div>
+</section>
+
 <section class="process">
   <div class="wrap">
     <div class="s-head">
@@ -258,15 +270,15 @@ home = head("Aura Event Management — Christmas Décor in Dubai & the UAE", "Au
       <a class="link-u" href="/work" data-reveal>All work <span class="arrow">→</span></a>
     </div>
     <div class="recent-grid">
-      <a class="frame" href="/work" data-reveal-img>{pic("arch-velvet","A garland arch of velvet baubles framing a wooden front door","(min-width:900px) 40vw, 50vw")}</a>
-      <a class="frame" href="/work" data-reveal-img>{pic("table-garland","A lush garland centrepiece on a glass dining table","(min-width:900px) 30vw, 50vw")}</a>
-      <a class="frame" href="/work" data-reveal-img>{pic("living-room-tree","A red and gold tree in a bright living room","(min-width:900px) 30vw, 50vw")}</a>
+      <a class="frame" href="/work" data-reveal-img>{pic("villa-entrance","A villa entrance dressed with garlands, red baubles and a balcony swag","(min-width:900px) 40vw, 50vw")}</a>
+      <a class="frame" href="/work" data-reveal-img>{pic("marble-table-garland","A long garland centrepiece on a marble dining table","(min-width:900px) 30vw, 50vw")}</a>
+      <a class="frame" href="/work" data-reveal-img>{pic("champagne-tree","A champagne and gold tree glowing in front of fairy lights","(min-width:900px) 30vw, 50vw")}</a>
     </div>
   </div>
 </section>
 
 <section class="book">
-  <div class="book-bg" aria-hidden="true">{pic("arch-velvet","","100vw")}</div>
+  <div class="book-bg" aria-hidden="true">{pic("house-lights-night","","100vw")}</div>
   <div class="wrap">
     <span class="eyebrow" data-reveal>Installation calendar</span>
     <h2 class="display h2" data-reveal>December fills early.</h2>
@@ -285,16 +297,29 @@ home = head("Aura Event Management — Christmas Décor in Dubai & the UAE", "Au
 
 # ---------------------------------------------------------------- WORK
 WORK = [
+  ("nutcracker-tree","Red, white &amp; gold, with nutcracker","trees"),
+  ("villa-entrance","Villa entrance &amp; balcony swag","entrances"),
+  ("champagne-tree","Champagne Gold tree","trees"),
+  ("villa-lights-night","Villa lit for December","outdoor"),
+  ("wreath-console","Wreath &amp; console garland","details"),
   ("velvet-bow-tree","Velvet Bordeaux tree","trees"),
   ("arch-velvet","Velvet garland arch","entrances"),
-  ("garden-tree-night","Garden tree, after dark","trees"),
-  ("tablescape","Red &amp; gold table runner","details"),
+  ("cafe-garlands","Café counter garlands","details"),
+  ("blush-tree","Rosé Blush tree","trees"),
+  ("house-lights-night","Façade lights &amp; wreath","outdoor"),
+  ("marble-table-garland","Marble table centrepiece","details"),
+  ("garden-tree-night","Garden tree, after dark","outdoor trees"),
   ("door-garland","Front door garland &amp; wreath","entrances"),
+  ("lit-living-tree","Living room evergreen","trees"),
+  ("console-garland","Console arrangement with dried oranges","details"),
   ("flocked-velvet-tree","Frosted tree, burgundy velvet","trees"),
-  ("candy-cane-tree","Candy Cane tree","trees"),
+  ("candy-sweets-tree","Candy &amp; sweets tree","trees"),
   ("ornament-doorway","Bauble-framed doorway","entrances"),
+  ("tablescape","Red &amp; gold table runner","details"),
+  ("basket-tree","Tabletop tree in a basket","details trees"),
   ("winter-white-tree","Winter White, flocked","trees"),
   ("table-garland","Dining garland centrepiece","details"),
+  ("candy-cane-tree","Candy Cane tree","trees"),
   ("starlight-tree","Starlight tree","trees"),
   ("living-room-tree","Living room classic","trees"),
 ]
@@ -310,7 +335,8 @@ work = head("Portfolio — Aura Event Management", "A portfolio of Christmas tre
     <button class="chip" data-filter="all" aria-pressed="true">All</button>
     <button class="chip" data-filter="trees" aria-pressed="false">Trees</button>
     <button class="chip" data-filter="entrances" aria-pressed="false">Entrances</button>
-    <button class="chip" data-filter="details" aria-pressed="false">Tables &amp; garlands</button>
+    <button class="chip" data-filter="details" aria-pressed="false">Tables &amp; interiors</button>
+    <button class="chip" data-filter="outdoor" aria-pressed="false">Outdoor</button>
   </div>
   <div class="masonry">
 {tiles}
