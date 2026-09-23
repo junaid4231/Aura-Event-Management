@@ -312,6 +312,9 @@
   if (window.Lenis && !matchMedia("(pointer: coarse)").matches) {
     const lenis = new Lenis({ lerp: 0.11, smoothWheel: true });
     window.__lenis = lenis;
+    // let the browser own pinch / Ctrl+wheel zoom, then re-measure the page
+    addEventListener("wheel", (e) => { if (e.ctrlKey) { lenis.stop(); clearTimeout(window.__zt); window.__zt = setTimeout(() => lenis.start(), 400); } }, { passive: true, capture: true });
+    addEventListener("resize", () => { lenis.resize(); ScrollTrigger.refresh(); });
     lenis.on("scroll", ScrollTrigger.update);
     gsap.ticker.add((t) => lenis.raf(t * 1000));
     gsap.ticker.lagSmoothing(0);
